@@ -1,6 +1,6 @@
 def entropy_from_trust(trust_score: float) -> float:
     """
-    Maps trust → entropy budget.
-    Lower trust increases entropy.
+    Map trust score (0.0-1.0) to an entropy budget.
+    Lower trust → higher entropy.
     """
-    return max(0.0, 1.0 - trust_score)
+    return max(0.0, min(1.0, 1.0 - trust_score))
