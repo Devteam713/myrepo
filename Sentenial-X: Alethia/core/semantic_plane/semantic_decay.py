@@ -1,6 +1,10 @@
 def evaluate_state(ses):
-    trust = sum(ses.trust_vector.values()) / max(len(ses.trust_vector), 1)
-    coherence = max(0.0, trust - ses.entropy_budget)
+    """
+    Computes semantic coherence and state based on trust and entropy.
+    """
+    trust_values = list(ses.trust_vector.values())
+    avg_trust = sum(trust_values) / max(len(trust_values), 1)
+    coherence = max(0.0, avg_trust - ses.entropy_budget)
 
     if coherence < 0.4:
         state = "collapsed"
