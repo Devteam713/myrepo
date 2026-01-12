@@ -10,50 +10,68 @@ Transforms data to ensure:
 
 Integrates with:
 - AdaptiveProfiles for profile selection
-- Linguistic operations for noise injection
+- LinguisticEntropy for noise injection
 - SemanticPlane for data execution and rendering
 
 Author: Sentenial-X Alethia Core Team
 """
 
-from typing import Any
+import logging
+from typing import Any, Union
+
 from core.entropy.adaptive_profiles import AdaptiveProfiles
-from core.linguistics.entropy_ops import apply_synonym_drift, apply_polysemy_injection, apply_referential_ambiguity
+from core.entropy.linguistic_entropy import LinguisticEntropy
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 class EntropyEngine:
     """
-    Applies semantic entropy transformations based on trust/context score.
+    Engine for applying adaptive semantic entropy transformations
+    based on trust/confidence scores.
     """
 
     def __init__(self):
-        """Initialize EntropyEngine."""
-        pass  # No persistent state; fully stateless per data object
+        """Initialize the EntropyEngine."""
+        # Stateless engine; profiles are loaded dynamically per transform
+        self.profiles = AdaptiveProfiles()
 
-    def transform(self, data: Any, trust_score: float) -> Any:
+    def transform(self, data: Union[str, Any], trust_score: float) -> Any:
         """
-        Apply semantic transformations to the input data according to the
-        trust/confidence level.
+        Apply semantic entropy transformations based on the trust/confidence score.
 
         Args:
-            data: The data object (string, structured text, or tokenized content)
-            trust_score: Normalized trust score in [0.0, 1.0]
+            data: Input content (string or structured text)
+            trust_score: Normalized trust/confidence score [0.0, 1.0]
 
         Returns:
-            Transformed data object with semantic noise applied
+            Transformed data with semantic noise applied
         """
-        # Select appropriate adaptive profile
-        profile = AdaptiveProfiles.get_profile(trust_score)
+        if not isinstance(data, str):
+            logger.warning("Non-string input detected; attempting to convert to string.")
+            try:
+                data = str(data)
+            except Exception as e:
+                logger.error("Failed to convert data to string: %s", e)
+                return data  # Return as-is
 
-        transformed_data = data
+        # Select adaptive profile based on trust score
+        profile = self.profiles.get_profile(trust_score)
 
-        # Apply synonym drift
-        transformed_data = apply_synonym_drift(transformed_data, probability=profile.synonym_drift)
+        # Initialize linguistic entropy engine with profile parameters
+        entropy = LinguisticEntropy(
+            synonym_prob=profile.synonym_drift,
+            polysemy_prob=profile.polysemy_injection,
+            referential_prob=profile.referential_ambiguity
+        )
 
-        # Apply polysemy injection
-        transformed_data = apply_polysemy_injection(transformed_data, probability=profile.polysemy_injection)
+        # Apply all transformations in sequence
+        transformed_data = entropy.apply_all(data)
 
-        # Apply referential ambiguity
-        transformed_data = apply_referential_ambiguity(transformed_data, probability=profile.referential_ambiguity)
+        logger.debug(
+            "EntropyEngine applied profile %s with trust_score %.2f",
+            profile.name, trust_score
+        )
 
         return transformed_data
