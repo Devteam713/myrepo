@@ -1,11 +1,14 @@
-# Architecture Overview
+# Alethia Architecture
 
 [ Storage ]
-   ↓
+     ↓
 [ Encryption / ABS ]
-   ↓
+     ↓
 [ Alethia Semantic Plane ]
-   ↓
-[ Export / Presentation ]
+     ↓
+[ Presentation / Export ]
 
-Alethia governs semantic interpretability at render-time.
+## Notes
+- Alethia acts as a semantic control plane
+- Meaning is executed at access time
+- SES artifacts are safe to store, transmit, and even exfiltrate
