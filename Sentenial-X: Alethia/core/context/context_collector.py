@@ -1,25 +1,30 @@
 """
 Context Collector Module
 
-Responsible for gathering runtime context signals used by Alethia's
+Responsible for gathering and normalizing runtime context signals used by Alethia's
 Semantic Plane to determine semantic rendering and entropy budgets.
 
 Context signals include:
 - Authentication confidence
 - Agent trust
-- Environment state
+- Environment trust
 - Temporal or session-based metadata
 
-These signals are collected, normalized, and aggregated for runtime
-evaluation by AlethiaRuntime.
+These signals are collected, optionally weighted, and aggregated for runtime
+evaluation by AlethiaRuntime or orchestration layers.
 
 Author: Sentenial-X Alethia Core Team
 """
 
 from dataclasses import dataclass, field
-from typing import Dict
+from typing import Dict, Optional
 import random
 import time
+import logging
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
 
 @dataclass
 class ContextVector:
@@ -41,13 +46,39 @@ class ContextVector:
             "timestamp": self.timestamp
         }
 
+    def weighted_score(self, weights: Optional[Dict[str, float]] = None) -> float:
+        """
+        Compute a weighted trust score from the context vector.
+
+        Args:
+            weights: Optional dictionary with keys matching context fields
+                     e.g., {"auth_confidence": 0.5, "agent_trust": 0.3, "environment_trust": 0.2}
+
+        Returns:
+            Weighted score between 0.0 and 1.0
+        """
+        if weights is None:
+            weights = {"auth_confidence": 0.4, "agent_trust": 0.4, "environment_trust": 0.2}
+
+        total_weight = sum(weights.values())
+        if total_weight == 0:
+            logger.warning("Total weight is 0; defaulting to unweighted average.")
+            total_weight = 1.0
+
+        score = (
+            self.auth_confidence * weights.get("auth_confidence", 0.0) +
+            self.agent_trust * weights.get("agent_trust", 0.0) +
+            self.environment_trust * weights.get("environment_trust", 0.0)
+        ) / total_weight
+
+        return max(0.0, min(1.0, score))
+
 
 class ContextCollector:
     """
-    Collects and normalizes context signals from local agents and
-    runtime environment.
+    Collects and normalizes context signals from local agents and runtime environment.
 
-    Provides a unified interface for Alethia semantic decisions.
+    Provides a unified interface for Alethia semantic decisions and entropy application.
     """
 
     def __init__(self):
@@ -55,7 +86,7 @@ class ContextCollector:
 
     def collect_from_agent(self, agent_signals: Dict[str, float]) -> None:
         """
-        Updates context vector with signals from an agent.
+        Update context vector with signals from an agent.
 
         Args:
             agent_signals: Dictionary with keys:
@@ -68,14 +99,24 @@ class ContextCollector:
         self.context.environment_trust = self._normalize(agent_signals.get("environment_trust", 0.0))
         self.context.timestamp = time.time()
 
-    def collect_randomized_demo(self) -> None:
+        logger.debug("Context updated from agent: %s", self.context.as_dict())
+
+    def collect_randomized_demo(self, seed: Optional[int] = None) -> None:
         """
-        Generates demo/randomized signals for testing or simulation.
+        Generate demo/randomized signals for testing or simulation.
+
+        Args:
+            seed: Optional random seed for reproducibility
         """
+        if seed is not None:
+            random.seed(seed)
+
         self.context.auth_confidence = random.uniform(0.0, 1.0)
         self.context.agent_trust = random.uniform(0.0, 1.0)
         self.context.environment_trust = random.uniform(0.0, 1.0)
         self.context.timestamp = time.time()
+
+        logger.info("Randomized demo context generated: %s", self.context.as_dict())
 
     def get_context(self) -> ContextVector:
         """Returns the current context vector."""
@@ -83,5 +124,5 @@ class ContextCollector:
 
     @staticmethod
     def _normalize(value: float) -> float:
-        """Normalize a value to [0.0, 1.0]."""
+        """Normalize a value to the range [0.0, 1.0]."""
         return max(0.0, min(1.0, value))
