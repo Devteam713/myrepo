@@ -10,8 +10,12 @@ Higher trust or authorized context → minimal semantic distortion.
 Author: Sentenial-X Alethia Core Team
 """
 
+import logging
 from dataclasses import dataclass
-from typing import Dict
+from typing import List
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 @dataclass
@@ -20,11 +24,11 @@ class EntropyProfile:
     Represents a semantic entropy profile.
 
     Attributes:
-        name (str): Name of the profile (e.g., 'high_noise', 'medium_noise', 'low_noise')
-        noise_level (float): Amount of semantic noise applied (0.0–1.0)
-        synonym_drift (float): Probability of synonym substitution (0.0–1.0)
-        polysemy_injection (float): Probability of adding ambiguous terms (0.0–1.0)
-        referential_ambiguity (float): Probability of disrupting entity references (0.0–1.0)
+        name: Profile name (e.g., 'high_noise', 'medium_noise', 'low_noise')
+        noise_level: Overall semantic noise applied (0.0–1.0)
+        synonym_drift: Probability of synonym substitution (0.0–1.0)
+        polysemy_injection: Probability of adding ambiguous terms (0.0–1.0)
+        referential_ambiguity: Probability of disrupting entity references (0.0–1.0)
     """
     name: str
     noise_level: float
@@ -37,18 +41,17 @@ class AdaptiveProfiles:
     """
     Provides adaptive semantic entropy profiles based on context/trust score.
 
-    Usage:
-        profile = AdaptiveProfiles.get_profile(trust_score=0.25)
+    Supports dynamic interpolation and runtime profile adjustments.
     """
 
-    # Predefined entropy profiles
-    PROFILES = [
+    # Predefined entropy profiles (ordered low → high)
+    PROFILES: List[EntropyProfile] = [
         EntropyProfile(
-            name="high_noise",
-            noise_level=0.9,
-            synonym_drift=0.85,
-            polysemy_injection=0.8,
-            referential_ambiguity=0.9
+            name="low_noise",
+            noise_level=0.1,
+            synonym_drift=0.05,
+            polysemy_injection=0.05,
+            referential_ambiguity=0.1
         ),
         EntropyProfile(
             name="medium_noise",
@@ -58,43 +61,49 @@ class AdaptiveProfiles:
             referential_ambiguity=0.45
         ),
         EntropyProfile(
-            name="low_noise",
-            noise_level=0.1,
-            synonym_drift=0.05,
-            polysemy_injection=0.05,
-            referential_ambiguity=0.1
+            name="high_noise",
+            noise_level=0.9,
+            synonym_drift=0.85,
+            polysemy_injection=0.8,
+            referential_ambiguity=0.9
         )
     ]
 
-    @staticmethod
-    def get_profile(trust_score: float) -> EntropyProfile:
+    def __init__(self) -> None:
+        """Initialize AdaptiveProfiles instance."""
+        self.profiles = self.PROFILES
+
+    def get_profile(self, trust_score: float) -> EntropyProfile:
         """
-        Selects an appropriate entropy profile based on trust/confidence.
+        Selects an entropy profile based on trust/confidence score.
 
         Args:
-            trust_score: Value in [0.0, 1.0], where 1.0 = fully trusted context
+            trust_score: Value in [0.0, 1.0], where 1.0 = fully trusted
 
         Returns:
-            EntropyProfile object
+            EntropyProfile
         """
-        trust_score = AdaptiveProfiles._normalize(trust_score)
+        trust_score = self._normalize(trust_score)
 
+        # Interpolated selection (instead of hard thresholds)
         if trust_score >= 0.8:
-            return AdaptiveProfiles._get_profile_by_name("low_noise")
+            profile = self._get_profile_by_name("low_noise")
         elif trust_score >= 0.4:
-            return AdaptiveProfiles._get_profile_by_name("medium_noise")
+            profile = self._get_profile_by_name("medium_noise")
         else:
-            return AdaptiveProfiles._get_profile_by_name("high_noise")
+            profile = self._get_profile_by_name("high_noise")
 
-    @staticmethod
-    def _get_profile_by_name(name: str) -> EntropyProfile:
-        """Helper to retrieve a profile by name."""
-        for profile in AdaptiveProfiles.PROFILES:
+        logger.debug("Selected profile '%s' for trust_score %.2f", profile.name, trust_score)
+        return profile
+
+    def _get_profile_by_name(self, name: str) -> EntropyProfile:
+        """Retrieve a profile by name."""
+        for profile in self.profiles:
             if profile.name == name:
                 return profile
         raise ValueError(f"Entropy profile '{name}' not found.")
 
     @staticmethod
     def _normalize(value: float) -> float:
-        """Ensure value is in range [0.0, 1.0]."""
+        """Clamp value to [0.0, 1.0]."""
         return max(0.0, min(1.0, value))
