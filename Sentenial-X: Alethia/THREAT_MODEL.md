@@ -1,11 +1,16 @@
 # Threat Model
 
-Adversaries may:
+### Adversary Capabilities
 - Steal full datasets
-- Possess credentials
-- Use LLMs and statistical tools
+- Access decrypted content via compromised services
+- Apply AI-assisted reconstruction
 
-Adversaries lack:
-- Live trust signals
-- Runtime semantic policies
-- Stable semantic convergence
+### Adversary Constraints
+- No persistent access to trust vectors
+- Cannot manipulate runtime semantic engine
+- Cannot bypass entropy policies
+
+### Defender Assumptions
+- Breach is assumed
+- Runtime context and trust are controlled
+- Semantic dependencies can rotate or expire
