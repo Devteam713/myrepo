@@ -1,5 +1,25 @@
 from dataclasses import dataclass, field
 from typing import Dict
+import uuid
+import time
+
+@dataclass
+class SemanticExecutionState:
+    """
+    Atomic semantic artifact.
+    Safe to exfiltrate. Unsafe to interpret.
+    """
+    ses_id: str = field(default_factory=lambda: str(uuid.uuid4()))
+    semantic_payload: str = ""
+    trust_vector: Dict[str, float] = field(default_factory=dict)
+    entropy_budget: float = 0.0
+    semantic_coherence: float = 1.0
+    execution_state: str = "latent"
+    last_eval: float = field(default_factory=time.time)
+
+
+from dataclasses import dataclass, field
+from typing import Dict
 import time
 import uuid
 
